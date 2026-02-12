@@ -29,6 +29,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -56,12 +57,11 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import id.klaras.wifilogger.data.dao.HeatmapPoint
 import id.klaras.wifilogger.data.entity.FloorPlan
+import id.klaras.wifilogger.data.repository.FrequencyBand
 import id.klaras.wifilogger.viewmodel.HeatmapUiState
 import id.klaras.wifilogger.viewmodel.HeatmapViewModel
 import org.koin.androidx.compose.koinViewModel
 import java.io.File
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 @Composable
 fun HeatmapScreen(
@@ -109,9 +109,12 @@ fun HeatmapScreen(
                 HeatmapContent(
                     floorPlan = state.floorPlan,
                     heatmapPoints = state.heatmapPoints,
+                    interpolatedGrid = state.interpolatedGrid,
                     availableSsids = state.availableSsids,
                     selectedSsid = state.selectedSsid,
-                    onSsidSelected = { viewModel.selectSsid(it) }
+                    selectedFrequency = state.selectedFrequency,
+                    onSsidSelected = { viewModel.selectSsid(it) },
+                    onFrequencySelected = { viewModel.selectFrequency(it) }
                 )
             }
         }
@@ -186,9 +189,12 @@ private fun NoDataCard() {
 private fun HeatmapContent(
     floorPlan: FloorPlan,
     heatmapPoints: List<HeatmapPoint>,
+    interpolatedGrid: Array<Array<Float>>,
     availableSsids: List<String>,
     selectedSsid: String?,
-    onSsidSelected: (String?) -> Unit
+    selectedFrequency: FrequencyBand,
+    onSsidSelected: (String?) -> Unit,
+    onFrequencySelected: (FrequencyBand) -> Unit
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
 
@@ -288,9 +294,41 @@ private fun HeatmapContent(
         Spacer(modifier = Modifier.height(16.dp))
     }
 
+    // Frequency Filter
+    Text(
+        text = "Frequency Band",
+        style = MaterialTheme.typography.labelMedium
+    )
+
+    Spacer(modifier = Modifier.height(4.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FilterChip(
+            selected = selectedFrequency == FrequencyBand.ALL,
+            onClick = { onFrequencySelected(FrequencyBand.ALL) },
+            label = { Text("All") }
+        )
+        FilterChip(
+            selected = selectedFrequency == FrequencyBand.FREQ_2_4GHZ,
+            onClick = { onFrequencySelected(FrequencyBand.FREQ_2_4GHZ) },
+            label = { Text("2.4 GHz") }
+        )
+        FilterChip(
+            selected = selectedFrequency == FrequencyBand.FREQ_5GHZ,
+            onClick = { onFrequencySelected(FrequencyBand.FREQ_5GHZ) },
+            label = { Text("5 GHz") }
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
     // Heatmap visualization
     HeatmapVisualization(
         floorPlan = floorPlan,
+        interpolatedGrid = interpolatedGrid,
         heatmapPoints = heatmapPoints,
         modifier = Modifier
             .fillMaxWidth()
@@ -311,6 +349,7 @@ private fun HeatmapContent(
 @Composable
 private fun HeatmapVisualization(
     floorPlan: FloorPlan,
+    interpolatedGrid: Array<Array<Float>>,
     heatmapPoints: List<HeatmapPoint>,
     modifier: Modifier = Modifier
 ) {
@@ -340,34 +379,47 @@ private fun HeatmapVisualization(
                 .onSizeChanged { imageSize = it }
         )
 
-        // Heatmap overlay
-        if (imageSize.width > 0 && imageSize.height > 0 && heatmapPoints.isNotEmpty()) {
+        // IDW Interpolated Heatmap overlay
+        if (imageSize.width > 0 && imageSize.height > 0 && interpolatedGrid.isNotEmpty()) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val width = size.width
                 val height = size.height
+                val gridWidth = interpolatedGrid.size
+                val gridHeight = interpolatedGrid[0].size
+                
+                // Cell dimensions
+                val cellWidth = width / gridWidth
+                val cellHeight = height / gridHeight
 
-                // Draw heatmap circles with interpolation
+                // Draw interpolated grid cells
+                for (x in 0 until gridWidth) {
+                    for (y in 0 until gridHeight) {
+                        val rssi = interpolatedGrid[x][y]
+                        val color = SignalColorMapper.rssiToColor(rssi)
+                        
+                        drawRect(
+                            color = color,
+                            topLeft = Offset(x * cellWidth, y * cellHeight),
+                            size = androidx.compose.ui.geometry.Size(cellWidth, cellHeight)
+                        )
+                    }
+                }
+                
+                // Draw scan point markers on top
                 heatmapPoints.forEach { point ->
                     val centerX = (point.coordinateX / 100f) * width
                     val centerY = (point.coordinateY / 100f) * height
-                    val color = rssiToColor(point.avgRssi.toFloat())
-
-                    // Draw multiple circles with decreasing opacity for a gradient effect
-                    val baseRadius = minOf(width, height) * 0.12f
-                    for (i in 5 downTo 1) {
-                        val radius = baseRadius * (i / 5f)
-                        val alpha = 0.15f * (6 - i) / 5f
-                        drawCircle(
-                            color = color.copy(alpha = alpha),
-                            radius = radius,
-                            center = Offset(centerX, centerY)
-                        )
-                    }
-
-                    // Draw center point
+                    
+                    // Draw white outline
                     drawCircle(
-                        color = color,
-                        radius = 8f,
+                        color = Color.White,
+                        radius = 6f,
+                        center = Offset(centerX, centerY)
+                    )
+                    // Draw dark center
+                    drawCircle(
+                        color = Color(0xFF424242),
+                        radius = 4f,
                         center = Offset(centerX, centerY)
                     )
                 }
@@ -505,19 +557,5 @@ private fun StatItem(label: String, value: String) {
     }
 }
 
-/**
- * Convert RSSI value to a color on the gradient from green (strong) to red (weak)
- * RSSI typically ranges from -30 dBm (strong) to -100 dBm (weak)
- */
-private fun rssiToColor(rssi: Float): Color {
-    // Normalize RSSI to 0-1 range (where 0 is weak and 1 is strong)
-    val normalized = ((rssi + 100) / 70f).coerceIn(0f, 1f)
 
-    return when {
-        normalized > 0.75f -> Color(0xFF00C853) // Strong - Green
-        normalized > 0.5f -> Color(0xFFFFEB3B)  // Good - Yellow
-        normalized > 0.25f -> Color(0xFFFF9800) // Fair - Orange
-        else -> Color(0xFFF44336)               // Weak - Red
-    }
-}
 

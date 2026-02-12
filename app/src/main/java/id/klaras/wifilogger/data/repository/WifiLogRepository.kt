@@ -7,6 +7,12 @@ import id.klaras.wifilogger.data.entity.WifiLog
 import id.klaras.wifilogger.data.entity.WifiLogWithFloorPlan
 import kotlinx.coroutines.flow.Flow
 
+enum class FrequencyBand(val minFreq: Int, val maxFreq: Int) {
+    ALL(0, Int.MAX_VALUE),
+    FREQ_2_4GHZ(2400, 2500),
+    FREQ_5GHZ(5150, 5850)
+}
+
 class WifiLogRepository(
     private val wifiLogDao: WifiLogDao
 ) {
@@ -59,4 +65,49 @@ class WifiLogRepository(
     
     suspend fun getHeatmapPointsForSsid(floorPlanId: Long, ssid: String) = 
         wifiLogDao.getHeatmapPointsForSsid(floorPlanId, ssid)
+    
+    suspend fun getHeatmapPointsForFrequency(
+        floorPlanId: Long,
+        frequencyBand: FrequencyBand
+    ): List<HeatmapPoint> {
+        return if (frequencyBand == FrequencyBand.ALL) {
+            wifiLogDao.getHeatmapPoints(floorPlanId)
+        } else {
+            wifiLogDao.getHeatmapPointsForFrequency(
+                floorPlanId,
+                frequencyBand.minFreq,
+                frequencyBand.maxFreq
+            )
+        }
+    }
+    
+    suspend fun getHeatmapPointsForSsidAndFrequency(
+        floorPlanId: Long,
+        ssid: String?,
+        frequencyBand: FrequencyBand
+    ): List<HeatmapPoint> {
+        return when {
+            ssid == null && frequencyBand == FrequencyBand.ALL -> {
+                wifiLogDao.getHeatmapPoints(floorPlanId)
+            }
+            ssid == null -> {
+                wifiLogDao.getHeatmapPointsForFrequency(
+                    floorPlanId,
+                    frequencyBand.minFreq,
+                    frequencyBand.maxFreq
+                )
+            }
+            frequencyBand == FrequencyBand.ALL -> {
+                wifiLogDao.getHeatmapPointsForSsid(floorPlanId, ssid)
+            }
+            else -> {
+                wifiLogDao.getHeatmapPointsForSsidAndFrequency(
+                    floorPlanId,
+                    ssid,
+                    frequencyBand.minFreq,
+                    frequencyBand.maxFreq
+                )
+            }
+        }
+    }
 }

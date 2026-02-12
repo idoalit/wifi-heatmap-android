@@ -116,4 +116,42 @@ interface WifiLogDao {
         GROUP BY coordinateX, coordinateY
     """)
     suspend fun getHeatmapPointsForSsid(floorPlanId: Long, ssid: String): List<HeatmapPoint>
+    
+    @Query("""
+        SELECT coordinateX, coordinateY, 
+               AVG(rssi) as avgRssi, 
+               MIN(rssi) as minRssi, 
+               MAX(rssi) as maxRssi,
+               COUNT(*) as scanCount
+        FROM wifi_logs 
+        WHERE floorPlanId = :floorPlanId 
+              AND frequency >= :minFreq 
+              AND frequency <= :maxFreq
+        GROUP BY coordinateX, coordinateY
+    """)
+    suspend fun getHeatmapPointsForFrequency(
+        floorPlanId: Long, 
+        minFreq: Int, 
+        maxFreq: Int
+    ): List<HeatmapPoint>
+    
+    @Query("""
+        SELECT coordinateX, coordinateY, 
+               AVG(rssi) as avgRssi, 
+               MIN(rssi) as minRssi, 
+               MAX(rssi) as maxRssi,
+               COUNT(*) as scanCount
+        FROM wifi_logs 
+        WHERE floorPlanId = :floorPlanId 
+              AND ssid = :ssid
+              AND frequency >= :minFreq 
+              AND frequency <= :maxFreq
+        GROUP BY coordinateX, coordinateY
+    """)
+    suspend fun getHeatmapPointsForSsidAndFrequency(
+        floorPlanId: Long, 
+        ssid: String,
+        minFreq: Int, 
+        maxFreq: Int
+    ): List<HeatmapPoint>
 }
