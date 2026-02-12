@@ -25,7 +25,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Utility for capturing Composable content as bitmap and exporting it
+ * Utility for exporting Composable content as bitmap
  */
 object HeatmapExportUtil {
     
@@ -142,39 +142,4 @@ object HeatmapExportUtil {
             .format(Date())
         return "WiFiHeatmap_$timestamp.png"
     }
-}
-
-/**
- * Helper class to track the state of a capturable Composable
- */
-class CaptureController {
-    var captureRequested: Boolean = false
-        private set
-    
-    var onCaptured: ((ImageBitmap) -> Unit)? = null
-        private set
-    
-    fun capture(onResult: (ImageBitmap) -> Unit) {
-        onCaptured = onResult
-        captureRequested = true
-    }
-    
-    fun captured(bitmap: ImageBitmap) {
-        onCaptured?.invoke(bitmap)
-        captureRequested = false
-        onCaptured = null
-    }
-    
-    fun reset() {
-        captureRequested = false
-        onCaptured = null
-    }
-}
-
-/**
- * Remember a CaptureController for capturing Composable content
- */
-@Composable
-fun rememberCaptureController(): CaptureController {
-    return remember { CaptureController() }
 }
