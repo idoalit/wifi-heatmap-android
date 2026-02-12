@@ -60,7 +60,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -71,9 +70,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import dev.shreyaspatil.capturable.Capturable
-import dev.shreyaspatil.capturable.controller.CaptureController
-import dev.shreyaspatil.capturable.controller.rememberCaptureController
 import id.klaras.wifilogger.data.dao.HeatmapPoint
 import id.klaras.wifilogger.data.entity.FloorPlan
 import id.klaras.wifilogger.data.repository.FrequencyBand
@@ -81,11 +77,6 @@ import id.klaras.wifilogger.viewmodel.HeatmapUiState
 import id.klaras.wifilogger.viewmodel.HeatmapViewModel
 import org.koin.androidx.compose.koinViewModel
 import java.io.File
-
-private enum class ExportAction {
-    SAVE,
-    SHARE
-}
 
 @Composable
 fun HeatmapScreen(
@@ -224,85 +215,92 @@ private fun HeatmapContent(
     var dropdownExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val captureController = rememberCaptureController()
     val snackbarHostState = remember { SnackbarHostState() }
     var isExporting by remember { mutableStateOf(false) }
-    var exportAction by remember { mutableStateOf<ExportAction?>(null) }
     
     // Handle save action
     val onSave: () -> Unit = {
-        isExporting = true
-        exportAction = ExportAction.SAVE
-        captureController.capture()
+        if (!isExporting) {
+            isExporting = true
+            scope.launch {
+                try {
+                    val bitmap = HeatmapExportUtil.renderHeatmapBitmap(
+                        floorPlan = floorPlan,
+                        interpolatedGrid = interpolatedGrid,
+                        heatmapPoints = heatmapPoints
+                    )
+
+                    if (bitmap == null) {
+                        snackbarHostState.showSnackbar("Failed to render heatmap image")
+                    } else {
+                        val uri = HeatmapExportUtil.saveBitmapToGallery(context, bitmap)
+                        if (uri != null) {
+                            snackbarHostState.showSnackbar("Heatmap saved to gallery!")
+                        } else {
+                            snackbarHostState.showSnackbar("Failed to save image")
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    snackbarHostState.showSnackbar("Error: ${e.message}")
+                } finally {
+                    isExporting = false
+                }
+            }
+        }
     }
     
     // Handle share action
     val onShare: () -> Unit = {
-        isExporting = true
-        exportAction = ExportAction.SHARE
-        captureController.capture()
+        if (!isExporting) {
+            isExporting = true
+            scope.launch {
+                try {
+                    val bitmap = HeatmapExportUtil.renderHeatmapBitmap(
+                        floorPlan = floorPlan,
+                        interpolatedGrid = interpolatedGrid,
+                        heatmapPoints = heatmapPoints
+                    )
+
+                    if (bitmap == null) {
+                        snackbarHostState.showSnackbar("Failed to render heatmap image")
+                    } else {
+                        val uri = HeatmapExportUtil.shareBitmap(context, bitmap)
+                        if (uri != null) {
+                            HeatmapExportUtil.openShareSheet(context, uri)
+                        } else {
+                            snackbarHostState.showSnackbar("Failed to share image")
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    snackbarHostState.showSnackbar("Error: ${e.message}")
+                } finally {
+                    isExporting = false
+                }
+            }
+        }
     }
     
     Box(modifier = Modifier.fillMaxWidth()) {
-        // Main content - wrapped with Capturable for screenshot capability
-        Capturable(
-            controller = captureController,
-            onCaptured = { imageBitmap, throwable ->
-                scope.launch {
-                    try {
-                        val action = exportAction
-                        if (imageBitmap != null && action != null) {
-                            val bitmap = imageBitmap.asAndroidBitmap()
-                            when (action) {
-                                ExportAction.SAVE -> {
-                                    val uri = HeatmapExportUtil.saveBitmapToGallery(context, bitmap)
-                                    if (uri != null) {
-                                        snackbarHostState.showSnackbar("Heatmap saved to gallery!")
-                                    } else {
-                                        snackbarHostState.showSnackbar("Failed to save image")
-                                    }
-                                }
-
-                                ExportAction.SHARE -> {
-                                    val uri = HeatmapExportUtil.shareBitmap(context, bitmap)
-                                    if (uri == null) {
-                                        snackbarHostState.showSnackbar("Failed to share image")
-                                    }
-                                }
-                            }
-                        } else if (throwable != null) {
-                            throwable.printStackTrace()
-                            snackbarHostState.showSnackbar("Error: ${throwable.message}")
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        snackbarHostState.showSnackbar("Error: ${e.message}")
-                    } finally {
-                        isExporting = false
-                        exportAction = null
-                    }
-                }
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(16.dp)
-            ) {
-                HeatmapContentInner(
-                    floorPlan = floorPlan,
-                    heatmapPoints = heatmapPoints,
-                    interpolatedGrid = interpolatedGrid,
-                    availableSsids = availableSsids,
-                    selectedSsid = selectedSsid,
-                    selectedFrequency = selectedFrequency,
-                    dropdownExpanded = dropdownExpanded,
-                    onDropdownExpandedChange = { dropdownExpanded = it },
-                    onSsidSelected = onSsidSelected,
-                    onFrequencySelected = onFrequencySelected
-                )
-            }
+            HeatmapContentInner(
+                floorPlan = floorPlan,
+                heatmapPoints = heatmapPoints,
+                interpolatedGrid = interpolatedGrid,
+                availableSsids = availableSsids,
+                selectedSsid = selectedSsid,
+                selectedFrequency = selectedFrequency,
+                dropdownExpanded = dropdownExpanded,
+                onDropdownExpandedChange = { dropdownExpanded = it },
+                onSsidSelected = onSsidSelected,
+                onFrequencySelected = onFrequencySelected
+            )
         }
         
         // Snackbar host for notifications at bottom
