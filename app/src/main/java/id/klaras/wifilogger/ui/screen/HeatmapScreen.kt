@@ -227,7 +227,8 @@ private fun HeatmapContent(
                     val bitmap = HeatmapExportUtil.renderHeatmapBitmap(
                         floorPlan = floorPlan,
                         interpolatedGrid = interpolatedGrid,
-                        heatmapPoints = heatmapPoints
+                        heatmapPoints = heatmapPoints,
+                        selectedSsid = selectedSsid
                     )
 
                     if (bitmap == null) {
@@ -259,7 +260,8 @@ private fun HeatmapContent(
                     val bitmap = HeatmapExportUtil.renderHeatmapBitmap(
                         floorPlan = floorPlan,
                         interpolatedGrid = interpolatedGrid,
-                        heatmapPoints = heatmapPoints
+                        heatmapPoints = heatmapPoints,
+                        selectedSsid = selectedSsid
                     )
 
                     if (bitmap == null) {

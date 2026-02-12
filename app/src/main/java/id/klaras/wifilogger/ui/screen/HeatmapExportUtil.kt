@@ -37,7 +37,8 @@ object HeatmapExportUtil {
     suspend fun renderHeatmapBitmap(
         floorPlan: FloorPlan,
         interpolatedGrid: Array<Array<Float>>,
-        heatmapPoints: List<HeatmapPoint>
+        heatmapPoints: List<HeatmapPoint>,
+        selectedSsid: String?
     ): Bitmap? = withContext(Dispatchers.IO) {
         try {
             val sourceBitmap = BitmapFactory.decodeFile(
@@ -61,6 +62,13 @@ object HeatmapExportUtil {
                 width = exportBitmap.width,
                 height = exportBitmap.height,
                 interpolatedGrid = interpolatedGrid
+            )
+            drawTitle(
+                canvas = canvas,
+                width = exportBitmap.width,
+                height = exportBitmap.height,
+                floorPlanName = floorPlan.name,
+                selectedSsid = selectedSsid
             )
             drawScanMarkers(
                 canvas = canvas,
@@ -257,6 +265,64 @@ object HeatmapExportUtil {
             canvas.drawCircle(centerX, centerY, outerRadius, outlinePaint)
             canvas.drawCircle(centerX, centerY, innerRadius, centerPaint)
         }
+    }
+
+    private fun drawTitle(
+        canvas: Canvas,
+        width: Int,
+        height: Int,
+        floorPlanName: String,
+        selectedSsid: String?
+    ) {
+        val minDimension = min(width, height).toFloat()
+        val padding = max(10f, minDimension * 0.02f)
+        val titleText = "WiFi Heatmap - ${floorPlanName.ifBlank { "Floor Plan" }}"
+        val ssidText = "SSID: ${selectedSsid ?: "All Networks"}"
+
+        val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = max(12f, minDimension * 0.022f)
+            isFakeBoldText = true
+        }
+        val subtitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = max(9f, minDimension * 0.016f)
+        }
+
+        val horizontalInset = max(14f, minDimension * 0.025f)
+        val maxTextWidth = width - (2f * (padding + horizontalInset))
+        while (titlePaint.measureText(titleText) > maxTextWidth && titlePaint.textSize > 8f) {
+            titlePaint.textSize -= 0.5f
+        }
+        while (subtitlePaint.measureText(ssidText) > maxTextWidth && subtitlePaint.textSize > 7f) {
+            subtitlePaint.textSize -= 0.5f
+        }
+
+        val titleMetrics = titlePaint.fontMetrics
+        val subtitleMetrics = subtitlePaint.fontMetrics
+        val titleHeight = titleMetrics.descent - titleMetrics.ascent
+        val subtitleHeight = subtitleMetrics.descent - subtitleMetrics.ascent
+        val lineGap = max(4f, minDimension * 0.006f)
+        val cardHeight = titleHeight + subtitleHeight + lineGap + (2f * padding)
+        val textBlockWidth = max(titlePaint.measureText(titleText), subtitlePaint.measureText(ssidText))
+        val cardWidth = min(width * 0.82f, textBlockWidth + (2f * horizontalInset))
+        val left = padding
+        val top = padding
+        val right = left + cardWidth
+        val bottom = top + cardHeight
+
+        val cardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(175, 20, 20, 20)
+            style = Paint.Style.FILL
+        }
+        val cornerRadius = max(8f, minDimension * 0.015f)
+        canvas.drawRoundRect(RectF(left, top, right, bottom), cornerRadius, cornerRadius, cardPaint)
+
+        val textX = left + horizontalInset
+        val titleY = top + padding - titleMetrics.ascent
+        val subtitleY = titleY + titleMetrics.descent - subtitleMetrics.ascent + lineGap
+        canvas.drawText(titleText, textX, titleY, titlePaint)
+        canvas.drawText(ssidText, textX, subtitleY, subtitlePaint)
     }
 
     private fun drawLegend(
