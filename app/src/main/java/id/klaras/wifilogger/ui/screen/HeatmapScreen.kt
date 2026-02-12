@@ -26,16 +26,23 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +50,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +58,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -57,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import id.klaras.wifilogger.data.dao.HeatmapPoint
@@ -202,6 +212,127 @@ private fun HeatmapContent(
     onFrequencySelected: (FrequencyBand) -> Unit
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val captureController = rememberCaptureController()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var isExporting by remember { mutableStateOf(false) }
+    
+    // Handle save action
+    val onSave = {
+        isExporting = true
+        captureController.capture { imageBitmap ->
+            scope.launch {
+                val bitmap = imageBitmap.asAndroidBitmap()
+                val uri = HeatmapExportUtil.saveBitmapToGallery(context, bitmap)
+                isExporting = false
+                
+                if (uri != null) {
+                    snackbarHostState.showSnackbar("Heatmap saved to gallery!")
+                } else {
+                    snackbarHostState.showSnackbar("Failed to save image")
+                }
+            }
+        }
+    }
+    
+    // Handle share action
+    val onShare = {
+        isExporting = true
+        captureController.capture { imageBitmap ->
+            scope.launch {
+                val bitmap = imageBitmap.asAndroidBitmap()
+                val uri = HeatmapExportUtil.shareBitmap(context, bitmap)
+                isExporting = false
+                
+                if (uri != null) {
+                    HeatmapExportUtil.openShareSheet(context, uri)
+                } else {
+                    snackbarHostState.showSnackbar("Failed to share image")
+                }
+            }
+        }
+    }
+    
+    Box(modifier = Modifier.fillMaxWidth()) {
+        // Main content
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .capturable(captureController)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp)
+        ) {
+            HeatmapContentInner(
+                floorPlan = floorPlan,
+                heatmapPoints = heatmapPoints,
+                interpolatedGrid = interpolatedGrid,
+                availableSsids = availableSsids,
+                selectedSsid = selectedSsid,
+                selectedFrequency = selectedFrequency,
+                dropdownExpanded = dropdownExpanded,
+                onDropdownExpandedChange = { dropdownExpanded = it },
+                onSsidSelected = onSsidSelected,
+                onFrequencySelected = onFrequencySelected
+            )
+        }
+        
+        // Floating action buttons for Save and Share
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SmallFloatingActionButton(
+                onClick = onSave,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                if (isExporting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(Icons.Default.Download, contentDescription = "Save")
+                }
+            }
+            
+            SmallFloatingActionButton(
+                onClick = onShare,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            ) {
+                if (isExporting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(Icons.Default.Share, contentDescription = "Share")
+                }
+            }
+        }
+    }
+    
+    // Snackbar host for notifications
+    SnackbarHost(hostState = snackbarHostState)
+}
+
+@Composable
+private fun HeatmapContentInner(
+    floorPlan: FloorPlan,
+    heatmapPoints: List<HeatmapPoint>,
+    interpolatedGrid: Array<Array<Float>>,
+    availableSsids: List<String>,
+    selectedSsid: String?,
+    selectedFrequency: FrequencyBand,
+    dropdownExpanded: Boolean,
+    onDropdownExpandedChange: (Boolean) -> Unit,
+    onSsidSelected: (String?) -> Unit,
+    onFrequencySelected: (FrequencyBand) -> Unit
+) {
 
     Text(
         text = floorPlan.name,
@@ -224,7 +355,7 @@ private fun HeatmapContent(
             OutlinedCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { dropdownExpanded = true }
+                    .clickable { onDropdownExpandedChange(true) }
             ) {
                 Row(
                     modifier = Modifier
@@ -246,7 +377,7 @@ private fun HeatmapContent(
 
             DropdownMenu(
                 expanded = dropdownExpanded,
-                onDismissRequest = { dropdownExpanded = false },
+                onDismissRequest = { onDropdownExpandedChange(false) },
                 modifier = Modifier.fillMaxWidth(0.9f)
             ) {
                 DropdownMenuItem(
@@ -258,7 +389,7 @@ private fun HeatmapContent(
                     },
                     onClick = {
                         onSsidSelected(null)
-                        dropdownExpanded = false
+                        onDropdownExpandedChange(false)
                     },
                     trailingIcon = {
                         if (selectedSsid == null) {
@@ -280,7 +411,7 @@ private fun HeatmapContent(
                         },
                         onClick = {
                             onSsidSelected(ssid)
-                            dropdownExpanded = false
+                            onDropdownExpandedChange(false)
                         },
                         trailingIcon = {
                             if (selectedSsid == ssid) {

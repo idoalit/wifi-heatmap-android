@@ -9,6 +9,14 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- For Android 13+ -->
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+    
+    <!-- Storage Permissions for Heatmap Export -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- For Android 13+ (optional - for reading media) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <application
         android:name=".WifiLoggerApplication"
@@ -31,6 +39,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- FileProvider for sharing heatmap images -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
     </application>
 
 </manifest>
