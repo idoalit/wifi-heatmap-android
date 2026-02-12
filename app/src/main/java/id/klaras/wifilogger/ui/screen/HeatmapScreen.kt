@@ -51,6 +51,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
@@ -557,5 +558,39 @@ private fun StatItem(label: String, value: String) {
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+private fun SignalLegendPreview() {
+    MaterialTheme {
+        SignalLegend()
+    }
+}
 
+@Preview(showBackground = true)
+@Composable
+private fun StatItemPreview() {
+    MaterialTheme {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            StatItem(label = "Scan Points", value = "42")
+            StatItem(label = "Avg Signal", value = "-65.3 dBm")
+            StatItem(label = "Best Signal", value = "-42 dBm")
+        }
+    }
+}
 
+@Preview(showBackground = true)
+@Composable
+private fun HeatmapStatisticsPreview() {
+    MaterialTheme {
+        HeatmapStatistics(
+            heatmapPoints = listOf(
+                HeatmapPoint(coordinateX = 10f, coordinateY = 20f, avgRssi = -55.0, minRssi = -60, maxRssi = -50, scanCount = 5),
+                HeatmapPoint(coordinateX = 30f, coordinateY = 40f, avgRssi = -65.0, minRssi = -70, maxRssi = -60, scanCount = 3),
+                HeatmapPoint(coordinateX = 50f, coordinateY = 60f, avgRssi = -75.0, minRssi = -80, maxRssi = -70, scanCount = 7)
+            )
+        )
+    }
+}

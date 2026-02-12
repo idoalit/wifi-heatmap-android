@@ -66,6 +66,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -648,4 +649,34 @@ private fun getSignalColor(strength: Int): Color {
 private fun formatTimestamp(timestamp: Long): String {
     val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LoggedNetworkItemPreview() {
+    MaterialTheme {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            LoggedNetworkItem(
+                result = WifiScanResult(
+                    ssid = "My WiFi Network",
+                    bssid = "00:11:22:33:44:55",
+                    rssi = -55,
+                    frequency = 2437,
+                    capabilities = "[WPA2-PSK-CCMP][RSN-PSK-CCMP][ESS]"
+                )
+            )
+            LoggedNetworkItem(
+                result = WifiScanResult(
+                    ssid = "Office WiFi 5GHz",
+                    bssid = "AA:BB:CC:DD:EE:FF",
+                    rssi = -72,
+                    frequency = 5180,
+                    capabilities = "[WPA2-PSK-CCMP][RSN-PSK-CCMP][ESS]"
+                )
+            )
+        }
+    }
 }

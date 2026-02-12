@@ -67,6 +67,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -569,6 +570,36 @@ fun RouterPointEditor(
                     }
                 }
             }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FloorPlanCardPreview() {
+    MaterialTheme {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            FloorPlanCard(
+                floorPlan = FloorPlan(
+                    id = 1,
+                    name = "Lantai 1 - Office",
+                    imagePath = "/path/to/image.jpg"
+                ),
+                onEditRouters = {},
+                onDelete = {}
+            )
+            FloorPlanCard(
+                floorPlan = FloorPlan(
+                    id = 2,
+                    name = "Lantai 2 - Meeting Rooms",
+                    imagePath = "/path/to/image2.jpg"
+                ),
+                onEditRouters = {},
+                onDelete = {}
+            )
         }
     }
 }

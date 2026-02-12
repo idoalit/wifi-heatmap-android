@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import id.klaras.wifilogger.viewmodel.WifiScanUiState
@@ -535,4 +536,52 @@ private fun getSignalColor(strength: Int): Color {
 private fun formatTime(timestamp: Long): String {
     val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SignalStrengthIndicatorPreview() {
+    MaterialTheme {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            SignalStrengthIndicator(strength = 90)
+            SignalStrengthIndicator(strength = 70)
+            SignalStrengthIndicator(strength = 50)
+            SignalStrengthIndicator(strength = 30)
+            SignalStrengthIndicator(strength = 10)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun WifiNetworkItemPreview() {
+    MaterialTheme {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            WifiNetworkCard(
+                network = WifiScanResult(
+                    ssid = "My WiFi Network",
+                    bssid = "00:11:22:33:44:55",
+                    rssi = -55,
+                    frequency = 2437,
+                    capabilities = "[WPA2-PSK-CCMP][RSN-PSK-CCMP][ESS]"
+                ),
+                isSelected = false,
+                onClick = {}
+            )
+            WifiNetworkCard(
+                network = WifiScanResult(
+                    ssid = "Office WiFi 5GHz",
+                    bssid = "AA:BB:CC:DD:EE:FF",
+                    rssi = -72,
+                    frequency = 5180,
+                    capabilities = "[WPA2-PSK-CCMP][RSN-PSK-CCMP][ESS]"
+                ),
+                isSelected = true,
+                onClick = {}
+            )
+        }
+    }
 }

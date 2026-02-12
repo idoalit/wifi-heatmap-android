@@ -44,7 +44,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import id.klaras.wifilogger.data.entity.WifiLog
 import id.klaras.wifilogger.data.entity.WifiLogWithFloorPlan
 import id.klaras.wifilogger.viewmodel.LogHistoryViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -122,8 +124,6 @@ fun LogHistoryScreen(
                         contentDescription = "Export"
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Export CSV")
             }
         }
 
@@ -347,4 +347,43 @@ private fun getSignalColor(rssi: Int) = when {
     rssi >= -50 -> MaterialTheme.colorScheme.primary
     rssi >= -70 -> MaterialTheme.colorScheme.tertiary
     else -> MaterialTheme.colorScheme.error
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LogItemCardPreview() {
+    MaterialTheme {
+        LogItemCard(
+            log = WifiLogWithFloorPlan(
+                wifiLog = WifiLog(
+                    id = 1,
+                    floorPlanId = 1,
+                    coordinateX = 150.5f,
+                    coordinateY = 200.3f,
+                    ssid = "WiFi Network",
+                    bssid = "00:11:22:33:44:55",
+                    rssi = -55,
+                    frequency = 2437,
+                    timestamp = System.currentTimeMillis()
+                ),
+                floorPlanName = "Lantai 1"
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FloorPlanLogHeaderPreview() {
+    MaterialTheme {
+        FloorPlanLogHeader(
+            floorPlanName = "Lantai 1",
+            logCount = 15,
+            isExpanded = true,
+            isLoading = false,
+            onToggle = {},
+            onExport = {},
+            onGenerateHeatmap = {}
+        )
+    }
 }
