@@ -196,6 +196,20 @@ class LogHistoryViewModel(
         }
     }
     
+    fun deleteFloorPlanLogs(floorPlanId: Long) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                wifiLogRepository.deleteByFloorPlanId(floorPlanId)
+                _exportResult.value = ExportResult.Success("Logs berhasil dihapus")
+            } catch (e: Exception) {
+                _exportResult.value = ExportResult.Error("Gagal menghapus logs: ${e.message}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun clearExportResult() {
         _exportResult.value = null
     }

@@ -1,7 +1,6 @@
 package id.klaras.wifilogger.ui.screen
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,25 +19,33 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -170,6 +177,9 @@ fun LogHistoryScreen(
                             },
                             onGenerateHeatmap = {
                                 onNavigateToHeatmap(floorPlanId.toString())
+                            },
+                            onDelete = {
+                                viewModel.deleteFloorPlanLogs(floorPlanId)
                             }
                         )
                     }
@@ -196,8 +206,12 @@ private fun FloorPlanLogHeader(
     isLoading: Boolean,
     onToggle: () -> Unit,
     onExport: () -> Unit,
-    onGenerateHeatmap: () -> Unit
+    onGenerateHeatmap: () -> Unit,
+    onDelete: () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -226,32 +240,66 @@ private fun FloorPlanLogHeader(
             }
 
             Row {
-                IconButton(
-                    onClick = onGenerateHeatmap,
-                    enabled = !isLoading
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.BarChart,
-                        contentDescription = "Generate Heatmap",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-
-                IconButton(
-                    onClick = onExport,
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    } else {
+                // Menu button with dropdown
+                Box {
+                    IconButton(
+                        onClick = { showMenu = true },
+                        enabled = !isLoading
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = "Export CSV",
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More options",
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Generate Heatmap") },
+                            onClick = {
+                                showMenu = false
+                                onGenerateHeatmap()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.BarChart,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = { Text("Export CSV") },
+                            onClick = {
+                                showMenu = false
+                                onExport()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Download,
+                                    contentDescription = null
+                                )
+                            }
+                        )
+
+                        HorizontalDivider()
+
+                        DropdownMenuItem(
+                            text = { Text("Delete All Logs") },
+                            onClick = {
+                                showMenu = false
+                                showDeleteDialog = true
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         )
                     }
                 }
@@ -265,6 +313,35 @@ private fun FloorPlanLogHeader(
                 }
             }
         }
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Hapus Semua Logs?") },
+            text = {
+                Text("Apakah Anda yakin ingin menghapus semua $logCount log dari \"$floorPlanName\"? Tindakan ini tidak dapat dibatalkan.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Hapus")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
     }
 }
 
@@ -383,7 +460,8 @@ private fun FloorPlanLogHeaderPreview() {
             isLoading = false,
             onToggle = {},
             onExport = {},
-            onGenerateHeatmap = {}
+            onGenerateHeatmap = {},
+            onDelete = {}
         )
     }
 }

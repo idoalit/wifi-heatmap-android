@@ -36,13 +36,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -236,6 +236,7 @@ private fun HeatmapContent(
                     } else {
                         val uri = HeatmapExportUtil.saveBitmapToGallery(context, bitmap)
                         if (uri != null) {
+                            isExporting = false
                             snackbarHostState.showSnackbar("Heatmap saved to gallery!")
                         } else {
                             snackbarHostState.showSnackbar("Failed to save image")
@@ -289,7 +290,8 @@ private fun HeatmapContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(16.dp)
+                .padding(top = 16.dp)
+                .padding(bottom = 72.dp) // Add extra padding at bottom for segmented buttons
         ) {
             HeatmapContentInner(
                 floorPlan = floorPlan,
@@ -314,43 +316,70 @@ private fun HeatmapContent(
         ) {
             SnackbarHost(hostState = snackbarHostState)
         }
-        
-        // Floating action buttons for Save and Share
-        Row(
+
+        // Segmented buttons for Save and Share at the bottom
+        SingleChoiceSegmentedButtonRow(
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            SmallFloatingActionButton(
+            SegmentedButton(
+                selected = false,
                 onClick = onSave,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                if (isExporting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(Icons.Default.Download, contentDescription = "Save")
+                enabled = !isExporting,
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = 0,
+                    count = 2
+                ),
+                label = {
+                    if (isExporting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Save")
+                    }
+                },
+                icon = {
+                    if (!isExporting) {
+                        Icon(
+                            Icons.Default.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
-            }
-            
-            SmallFloatingActionButton(
+            )
+            SegmentedButton(
+                selected = false,
                 onClick = onShare,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            ) {
-                if (isExporting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(Icons.Default.Share, contentDescription = "Share")
+                enabled = !isExporting,
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = 1,
+                    count = 2
+                ),
+                label = {
+                    if (isExporting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Share")
+                    }
+                },
+                icon = {
+                    if (!isExporting) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
-            }
+            )
         }
     }
 }
