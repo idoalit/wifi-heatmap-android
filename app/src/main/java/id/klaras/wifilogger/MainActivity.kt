@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -40,6 +41,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import id.klaras.wifilogger.auth.AuthState
 import id.klaras.wifilogger.auth.AuthViewModel
 import id.klaras.wifilogger.ui.screen.FloorPlanScreen
+import id.klaras.wifilogger.ui.screen.HeatmapAccessScreen
 import id.klaras.wifilogger.ui.screen.HeatmapScreen
 import id.klaras.wifilogger.ui.screen.LogHistoryScreen
 import id.klaras.wifilogger.ui.screen.LoggingScreen
@@ -132,7 +134,7 @@ private fun AuthedApp(
                     title = {
                         Text(when (currentRoute?.substringBefore("/")) {
                             AppDestinations.FLOOR_PLANS.name -> "Floor Plans"
-                            AppDestinations.WIFI_SCAN.name -> "WiFi Scanner"
+                            AppDestinations.WIFI_SCAN.name -> "Heatmap"
                             AppDestinations.LOGGING.name -> "WiFi Logging"
                             AppDestinations.LOG_HISTORY.name -> "Riwayat Log WiFi"
                             "heatmap" -> "WiFi Heatmap"
@@ -167,10 +169,13 @@ private fun AuthedApp(
                     )
                 }
                 composable(AppDestinations.WIFI_SCAN.name) {
-                    WifiScanScreen(
+                    HeatmapAccessScreen(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(innerPadding)
+                            .padding(innerPadding),
+                        onNavigateToHeatmap = { floorPlanId ->
+                            navController.navigate("heatmap/$floorPlanId")
+                        }
                     )
                 }
                 composable(AppDestinations.LOG_HISTORY.name) {
@@ -204,7 +209,7 @@ enum class AppDestinations(
     val icon: ImageVector,
 ) {
     FLOOR_PLANS("Rooms", Icons.Default.Home),
-    WIFI_SCAN("Scan", Icons.Default.Refresh),
+    WIFI_SCAN("Heatmap", Icons.Default.Map),
     LOGGING("Logging", Icons.Default.Create),
-    LOG_HISTORY("History", Icons.Default.List),
+    LOG_HISTORY("Logs", Icons.Default.List),
 }
