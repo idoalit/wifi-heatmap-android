@@ -72,7 +72,7 @@ class WifiScannerHelper(private val context: Context) {
      */
     fun startScan(): Flow<ScanState> = callbackFlow {
         val currentTime = System.currentTimeMillis()
-        
+
         // Check for throttling
         if (isThrottled()) {
             trySend(ScanState.Throttled(
@@ -82,22 +82,24 @@ class WifiScannerHelper(private val context: Context) {
             close()
             return@callbackFlow
         }
-        
+
         // Check if enough time has passed since last scan
         val timeUntilNextScan = getTimeUntilNextScan()
         if (timeUntilNextScan > 0) {
             trySend(ScanState.WaitingForCooldown(timeUntilNextScan))
+            close()
+            return@callbackFlow
         }
-        
+
         // Check if WiFi is enabled
         if (!isWifiEnabled()) {
             trySend(ScanState.Error("WiFi is disabled. Please enable WiFi to scan."))
             close()
             return@callbackFlow
         }
-        
+
         trySend(ScanState.Scanning)
-        
+
         val wifiScanReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 val success = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -130,10 +132,10 @@ class WifiScannerHelper(private val context: Context) {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             context.registerReceiver(wifiScanReceiver, intentFilter)
         }
-        
+
         // Start the scan
         val scanStarted = wifiManager.startScan()
-        
+
         if (!scanStarted) {
             // Scan couldn't be started, return cached results
             val cachedResults = getScanResults()
@@ -143,14 +145,14 @@ class WifiScannerHelper(private val context: Context) {
                 trySend(ScanState.Error("Could not start scan. System may be throttling requests."))
             }
         }
-        
+
         // Update tracking
         lastScanTime = currentTime
         scanCountInWindow++
         if (scanCountInWindow == 1) {
             windowStartTime = currentTime
         }
-        
+
         awaitClose {
             try {
                 context.unregisterReceiver(wifiScanReceiver)

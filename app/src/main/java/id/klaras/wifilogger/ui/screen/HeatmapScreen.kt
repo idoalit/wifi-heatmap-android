@@ -81,6 +81,7 @@ import java.io.File
 @Composable
 fun HeatmapScreen(
     floorPlanId: String,
+    modifier: Modifier = Modifier,
     viewModel: HeatmapViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -90,18 +91,11 @@ fun HeatmapScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .padding(WindowInsets.statusBars.asPaddingValues())
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            text = "WiFi Heatmap",
-            style = MaterialTheme.typography.headlineMedium
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
 
         when (val state = uiState) {
             is HeatmapUiState.Loading -> {

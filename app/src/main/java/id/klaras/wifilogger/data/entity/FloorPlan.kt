@@ -8,5 +8,6 @@ data class FloorPlan(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
-    val imagePath: String
+    val imagePath: String,
+    val remoteId: String? = null
 )

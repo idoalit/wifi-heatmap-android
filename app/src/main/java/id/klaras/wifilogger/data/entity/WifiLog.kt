@@ -27,5 +27,6 @@ data class WifiLog(
     val bssid: String,
     val rssi: Int,
     val frequency: Int,
-    val timestamp: Long
+    val timestamp: Long,
+    val remoteId: String? = null
 )

@@ -10,7 +10,7 @@ import id.klaras.wifilogger.data.entity.WifiLog
 
 @Database(
     entities = [FloorPlan::class, RouterPoint::class, WifiLog::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class WifiLoggerDatabase : RoomDatabase() {

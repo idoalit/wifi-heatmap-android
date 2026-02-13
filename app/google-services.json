@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "249421276337",
+    "project_id": "wifi-heatmap-347a6",
+    "storage_bucket": "wifi-heatmap-347a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:249421276337:android:38907567c4146c1a2e2e90",
+        "android_client_info": {
+          "package_name": "id.klaras.wifilogger"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "249421276337-tvcvimgjuvcequ6k0g1n7n0129rji32m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBTwX__6wnI_QrGSl2bHhKsq9UwyJ9pOo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "249421276337-tvcvimgjuvcequ6k0g1n7n0129rji32m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

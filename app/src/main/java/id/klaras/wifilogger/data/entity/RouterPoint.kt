@@ -22,5 +22,6 @@ data class RouterPoint(
     val id: Long = 0,
     val floorPlanId: Long,
     val coordinateX: Float,
-    val coordinateY: Float
+    val coordinateY: Float,
+    val remoteId: String? = null
 )

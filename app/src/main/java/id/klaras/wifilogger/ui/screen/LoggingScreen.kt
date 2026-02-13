@@ -79,6 +79,7 @@ import id.klaras.wifilogger.viewmodel.WifiLogViewModel
 import id.klaras.wifilogger.viewmodel.WifiScanUiState
 import id.klaras.wifilogger.viewmodel.WifiScannerViewModel
 import id.klaras.wifilogger.wifi.WifiScanResult
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.io.File
@@ -111,7 +112,8 @@ fun LoggingScreen(
     // Scan state
     val scanState by wifiScannerViewModel.scanState.collectAsState()
     val scanResults by wifiScannerViewModel.scanResults.collectAsState()
-    
+    var cooldownRemainingMs by remember { mutableStateOf<Long?>(null) }
+
     // Logging state
     var isLogging by remember { mutableStateOf(false) }
     var savedCount by remember { mutableStateOf(0) }
@@ -153,61 +155,124 @@ fun LoggingScreen(
     ) { permissions ->
         hasPermission = permissions.values.all { it }
         if (hasPermission && selectedFloorPlan != null && hasSamplingPosition) {
+            val throttleActive = wifiScannerViewModel.isThrottled()
+            val cooldownMs = wifiScannerViewModel.getTimeUntilNextScan()
+            if (throttleActive) {
+                scope.launch {
+                    snackbarHostState.showSnackbar("Too many scans. Please wait a bit and try again.")
+                }
+                return@rememberLauncherForActivityResult
+            }
+            if (cooldownMs > 0) {
+                scope.launch {
+                    snackbarHostState.showSnackbar("Please wait ${formatRemainingSeconds(cooldownMs)}s before scanning again.")
+                }
+                return@rememberLauncherForActivityResult
+            }
             isLogging = true
             wifiScannerViewModel.startScan()
         }
     }
-    
+
     // Handle scan completion - save results to database
     LaunchedEffect(scanState) {
-        if (scanState is WifiScanUiState.Success && isLogging && selectedFloorPlan != null && hasSamplingPosition) {
-            // Save all scan results
-            wifiScannerViewModel.saveAllResultsToFloorPlan(
-                floorPlanId = selectedFloorPlan!!.id,
-                coordinateX = samplingX,
-                coordinateY = samplingY
-            )
-            
-            savedCount = scanResults.size
-            lastLogTime = System.currentTimeMillis()
-            
-            scope.launch {
-                snackbarHostState.showSnackbar(
-                    "Saved ${scanResults.size} WiFi networks at (${String.format("%.1f", samplingX)}, ${String.format("%.1f", samplingY)})"
-                )
+        when (val state = scanState) {
+            is WifiScanUiState.Success -> {
+                if (isLogging && selectedFloorPlan != null && hasSamplingPosition) {
+                    wifiScannerViewModel.saveAllResultsToFloorPlan(
+                        floorPlanId = selectedFloorPlan!!.id,
+                        coordinateX = samplingX,
+                        coordinateY = samplingY
+                    )
+
+                    savedCount = scanResults.size
+                    lastLogTime = System.currentTimeMillis()
+
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            "Saved ${scanResults.size} WiFi networks at (${String.format("%.1f", samplingX)}, ${String.format("%.1f", samplingY)})"
+                        )
+                    }
+
+                    // Refresh scan points
+                    wifiLogViewModel.loadScanPoints(selectedFloorPlan!!.id)
+                    isLogging = false
+                }
             }
-            
-            // Refresh scan points
-            wifiLogViewModel.loadScanPoints(selectedFloorPlan!!.id)
-            isLogging = false
-        } else if (scanState is WifiScanUiState.Error && isLogging) {
-            isLogging = false
-            scope.launch {
-                snackbarHostState.showSnackbar(
-                    (scanState as WifiScanUiState.Error).message
-                )
+            is WifiScanUiState.Error -> {
+                if (isLogging) {
+                    isLogging = false
+                }
+                scope.launch {
+                    snackbarHostState.showSnackbar(state.message)
+                }
+            }
+            is WifiScanUiState.Cooldown -> {
+                if (isLogging) {
+                    isLogging = false
+                }
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        "Please wait ${formatRemainingSeconds(state.remainingMs)}s before scanning again."
+                    )
+                }
+            }
+            is WifiScanUiState.Throttled -> {
+                if (isLogging) {
+                    isLogging = false
+                }
+                scope.launch {
+                    snackbarHostState.showSnackbar(state.message)
+                }
+            }
+            else -> Unit
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (!isLogging && scanState !is WifiScanUiState.Scanning) {
+                val remainingMs = wifiScannerViewModel.getTimeUntilNextScan()
+                cooldownRemainingMs = if (remainingMs > 0) remainingMs else null
+            } else {
+                cooldownRemainingMs = null
+            }
+            delay(1_000L)
+        }
+    }
+
+    LaunchedEffect(scanState) {
+        when (val state = scanState) {
+            is WifiScanUiState.Cooldown -> {
+                var remainingMs = state.remainingMs
+                cooldownRemainingMs = remainingMs
+                while (remainingMs > 0) {
+                    delay(1_000L)
+                    remainingMs = (remainingMs - 1_000L).coerceAtLeast(0L)
+                    cooldownRemainingMs = remainingMs
+                }
+            }
+            is WifiScanUiState.Scanning -> {
+                // Do nothing, scanning in progress
+            }
+            else -> {
+                val remainingMs = wifiScannerViewModel.getTimeUntilNextScan()
+                cooldownRemainingMs = if (remainingMs > 0) remainingMs else null
             }
         }
     }
-    
+
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text(
-                text = "WiFi Logging",
-                style = MaterialTheme.typography.headlineMedium
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
+
             Text(
                 text = "Select a floor plan, tap on the map to mark your position, then scan.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -367,32 +432,103 @@ fun LoggingScreen(
                     if (!hasPermission) {
                         permissionLauncher.launch(requiredPermissions)
                     } else {
+                        val throttleActive = wifiScannerViewModel.isThrottled()
+                        val cooldownMs = wifiScannerViewModel.getTimeUntilNextScan()
+                        if (throttleActive) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Too many scans. Please wait a bit and try again.")
+                            }
+                            return@Button
+                        }
+                        if (cooldownMs > 0) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Please wait ${formatRemainingSeconds(cooldownMs)}s before scanning again.")
+                            }
+                            return@Button
+                        }
                         isLogging = true
                         wifiScannerViewModel.startScan()
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = selectedFloorPlan != null && 
-                          hasSamplingPosition &&
-                          scanState !is WifiScanUiState.Scanning &&
-                          !isLogging &&
-                          wifiScannerViewModel.isWifiEnabled()
+                enabled = selectedFloorPlan != null &&
+                    hasSamplingPosition &&
+                    scanState !is WifiScanUiState.Scanning &&
+                    !isLogging &&
+                    wifiScannerViewModel.isWifiEnabled() &&
+                    (cooldownRemainingMs == null)
             ) {
-                if (scanState is WifiScanUiState.Scanning || isLogging) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Scanning...")
-                } else {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Scan WiFi")
+                when (val state = scanState) {
+                    is WifiScanUiState.Scanning -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Scanning...")
+                    }
+                    is WifiScanUiState.Cooldown -> {
+                        val remainingMs = cooldownRemainingMs ?: state.remainingMs
+                        Text("Wait ${formatRemainingSeconds(remainingMs)}s")
+                    }
+                    else -> {
+                        if (cooldownRemainingMs != null) {
+                            Text("Wait ${formatRemainingSeconds(cooldownRemainingMs!!)}s")
+                        } else if (isLogging) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Scanning...")
+                        } else {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Scan WiFi")
+                        }
+                    }
                 }
             }
-            
+
+            // Cooldown/throttle hints
+            when (val state = scanState) {
+                is WifiScanUiState.Cooldown -> {
+                    val remainingMs = cooldownRemainingMs ?: state.remainingMs
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Please wait ${formatRemainingSeconds(remainingMs)}s before the next scan.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                is WifiScanUiState.Throttled -> {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = state.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                else -> {
+                    if (cooldownRemainingMs != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Please wait ${formatRemainingSeconds(cooldownRemainingMs!!)}s before the next scan.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
             // WiFi status warning
             if (!wifiScannerViewModel.isWifiEnabled()) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -649,6 +785,10 @@ private fun getSignalColor(strength: Int): Color {
 private fun formatTimestamp(timestamp: Long): String {
     val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+private fun formatRemainingSeconds(remainingMs: Long): Long {
+    return (remainingMs + 999L) / 1000L
 }
 
 @Preview(showBackground = true)

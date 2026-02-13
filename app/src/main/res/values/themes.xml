@@ -2,4 +2,10 @@
 <resources>
 
     <style name="Theme.WiFiLogger" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.WiFiLogger.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.WiFiLogger</item>
+    </style>
 </resources>

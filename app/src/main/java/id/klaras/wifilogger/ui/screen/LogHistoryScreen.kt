@@ -63,6 +63,7 @@ import java.util.Locale
 
 @Composable
 fun LogHistoryScreen(
+    modifier: Modifier = Modifier,
     viewModel: LogHistoryViewModel = koinViewModel(),
     onNavigateToHeatmap: (String) -> Unit
 ) {
@@ -98,10 +99,9 @@ fun LogHistoryScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .padding(WindowInsets.statusBars.asPaddingValues())
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         // Header
         Row(
@@ -109,11 +109,6 @@ fun LogHistoryScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Riwayat Log WiFi",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
 
             Button(
                 onClick = { viewModel.exportToCsv(context) },

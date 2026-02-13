@@ -124,20 +124,13 @@ fun FloorPlanScreen(
                         Icon(Icons.Default.Add, contentDescription = "Add Floor Plan")
                     }
                 }
-            ) { innerPadding ->
+            ) { paddingValues ->
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Text(
-                        text = "Floor Plans",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     if (floorPlans.isEmpty()) {
                         Text(
                             text = "No floor plans yet. Tap + to add one.",
@@ -167,33 +160,28 @@ fun FloorPlanScreen(
         is FloorPlanScreenState.AddForm -> {
             Scaffold(
                 modifier = modifier,
-                snackbarHost = { SnackbarHost(snackbarHostState) },
-                topBar = {
-                    TopAppBar(
-                        title = { Text("Add Floor Plan") },
-                        navigationIcon = {
-                            IconButton(onClick = { screenState = FloorPlanScreenState.List }) {
-                                Icon(Icons.Default.ArrowBack, "Back")
-                            }
-                        }
-                    )
-                }
-            ) { innerPadding ->
-                FloorPlanForm(
+                snackbarHost = { SnackbarHost(snackbarHostState) }
+            ) { paddingValues ->
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(16.dp),
-                    onSave = { name, imagePath ->
-                        viewModel.insertFloorPlan(name, imagePath) { newId ->
-                            screenState = FloorPlanScreenState.List
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Floor plan saved!")
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    FloorPlanForm(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false),
+                        onSave = { name, imagePath ->
+                            viewModel.insertFloorPlan(name, imagePath) { newId ->
+                                screenState = FloorPlanScreenState.List
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Floor plan saved!")
+                                }
                             }
-                        }
-                    },
-                    onCancel = { screenState = FloorPlanScreenState.List }
-                )
+                        },
+                        onCancel = { screenState = FloorPlanScreenState.List }
+                    )
+                }
             }
         }
         
@@ -201,32 +189,40 @@ fun FloorPlanScreen(
             selectedFloorPlan?.let { floorPlan ->
                 Scaffold(
                     modifier = modifier,
-                    snackbarHost = { SnackbarHost(snackbarHostState) },
-                    topBar = {
-                        TopAppBar(
-                            title = { Text(floorPlan.name) },
-                            navigationIcon = {
-                                IconButton(onClick = { screenState = FloorPlanScreenState.List }) {
-                                    Icon(Icons.Default.ArrowBack, "Back")
-                                }
-                            }
-                        )
-                    }
-                ) { innerPadding ->
-                    RouterPointEditor(
-                        floorPlan = floorPlan,
-                        routerPoints = routerPoints,
-                        onAddRouterPoint = { x, y ->
-                            viewModel.addRouterPoint(floorPlan.id, x, y)
-                        },
-                        onDeleteRouterPoint = { routerPoint ->
-                            viewModel.deleteRouterPoint(routerPoint)
-                        },
+                    snackbarHost = { SnackbarHost(snackbarHostState) }
+                ) { paddingValues ->
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(innerPadding)
-                            .padding(16.dp)
-                    )
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = { screenState = FloorPlanScreenState.List }) {
+                                Icon(Icons.Default.ArrowBack, "Back")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = floorPlan.name,
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        RouterPointEditor(
+                            floorPlan = floorPlan,
+                            routerPoints = routerPoints,
+                            onAddRouterPoint = { x, y ->
+                                viewModel.addRouterPoint(floorPlan.id, x, y)
+                            },
+                            onDeleteRouterPoint = { routerPoint ->
+                                viewModel.deleteRouterPoint(routerPoint)
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }

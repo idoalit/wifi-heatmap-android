@@ -1,6 +1,10 @@
 package id.klaras.wifilogger.di
 
 import androidx.room.Room
+import com.google.firebase.auth.FirebaseAuth
+import id.klaras.wifilogger.auth.AuthRepository
+import id.klaras.wifilogger.auth.AuthRepositoryContract
+import id.klaras.wifilogger.auth.AuthViewModel
 import id.klaras.wifilogger.data.WifiLoggerDatabase
 import id.klaras.wifilogger.data.repository.FloorPlanRepository
 import id.klaras.wifilogger.data.repository.WifiLogRepository
@@ -44,4 +48,10 @@ val viewModelModule = module {
     viewModel { HeatmapViewModel(get(), get()) }
 }
 
-val appModules = listOf(databaseModule, repositoryModule, wifiModule, viewModelModule)
+val authModule = module {
+    single { FirebaseAuth.getInstance() }
+    single<AuthRepositoryContract> { AuthRepository(get()) }
+    viewModel { AuthViewModel(get()) }
+}
+
+val appModules = listOf(databaseModule, repositoryModule, wifiModule, viewModelModule, authModule)
