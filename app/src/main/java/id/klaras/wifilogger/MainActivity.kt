@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.CircularProgressIndicator
@@ -46,7 +45,6 @@ import id.klaras.wifilogger.ui.screen.HeatmapScreen
 import id.klaras.wifilogger.ui.screen.LogHistoryScreen
 import id.klaras.wifilogger.ui.screen.LoggingScreen
 import id.klaras.wifilogger.ui.screen.LoginScreen
-import id.klaras.wifilogger.ui.screen.WifiScanScreen
 import id.klaras.wifilogger.ui.theme.WiFiLoggerTheme
 import org.koin.androidx.compose.koinViewModel
 
