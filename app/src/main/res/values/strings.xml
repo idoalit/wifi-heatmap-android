@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">WiFi Logger</string>
-    <string name="login_title">Masuk</string>
-    <string name="login_subtitle">Gunakan akun Google untuk melanjutkan</string>
-    <string name="login_google_button">Masuk dengan Google</string>
+    <string name="login_title">Sign In</string>
+    <string name="login_subtitle">Use your Google account to continue</string>
+    <string name="login_google_button">Sign in with Google</string>
     <string name="default_web_client_id">REPLACE_WITH_WEB_CLIENT_ID</string>
-    <string name="login_missing_web_client_id">Konfigurasi login belum lengkap. Perbarui file google-services.json.</string>
+    <string name="login_missing_web_client_id">Login configuration is incomplete. Please update the google-services.json file.</string>
 </resources>

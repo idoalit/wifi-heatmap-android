@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -82,7 +83,7 @@ fun LogHistoryScreen(
                 is LogHistoryViewModel.ExportResult.Success -> {
                     Toast.makeText(
                         context,
-                        "Berhasil diekspor ke ${result.filePath}",
+                        "Exported successfully to ${result.filePath}",
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -125,6 +126,8 @@ fun LogHistoryScreen(
                         imageVector = Icons.Default.Download,
                         contentDescription = "Export"
                     )
+                    Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+                    Text("Export All to CSV")
                 }
             }
         }
@@ -133,7 +136,7 @@ fun LogHistoryScreen(
 
         // Summary
         Text(
-            text = "Total: ${logs.size} log dari ${groupedLogs.size} denah",
+            text = "Total: ${logs.size} logs across ${groupedLogs.size} floor plans",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -146,7 +149,7 @@ fun LogHistoryScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Belum ada log WiFi",
+                    text = "No WiFi logs yet",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -228,7 +231,7 @@ private fun FloorPlanLogHeader(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "$logCount log",
+                    text = "$logCount logs",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
@@ -302,7 +305,7 @@ private fun FloorPlanLogHeader(
                 IconButton(onClick = onToggle) {
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (isExpanded) "Tutup" else "Buka",
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
@@ -314,9 +317,9 @@ private fun FloorPlanLogHeader(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Hapus Semua Logs?") },
+            title = { Text("Delete All Logs?") },
             text = {
-                Text("Apakah Anda yakin ingin menghapus semua $logCount log dari \"$floorPlanName\"? Tindakan ini tidak dapat dibatalkan.")
+                Text("Are you sure you want to delete all $logCount logs from \"$floorPlanName\"? This action cannot be undone.")
             },
             confirmButton = {
                 Button(
@@ -328,12 +331,12 @@ private fun FloorPlanLogHeader(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Hapus")
+                    Text("Delete")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Batal")
+                    Text("Cancel")
                 }
             }
         )
@@ -385,7 +388,7 @@ private fun LogItemCard(log: WifiLogWithFloorPlan) {
                 )
 
                 Text(
-                    text = "Koordinat: (${String.format("%.1f", log.wifiLog.coordinateX)}, ${String.format("%.1f", log.wifiLog.coordinateY)})",
+                    text = "Coordinates: (${String.format("%.1f", log.wifiLog.coordinateX)}, ${String.format("%.1f", log.wifiLog.coordinateY)})",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -438,7 +441,7 @@ private fun LogItemCardPreview() {
                     frequency = 2437,
                     timestamp = System.currentTimeMillis()
                 ),
-                floorPlanName = "Lantai 1"
+                floorPlanName = "Floor 1"
             )
         )
     }
@@ -449,7 +452,7 @@ private fun LogItemCardPreview() {
 private fun FloorPlanLogHeaderPreview() {
     MaterialTheme {
         FloorPlanLogHeader(
-            floorPlanName = "Lantai 1",
+            floorPlanName = "Floor 1",
             logCount = 15,
             isExpanded = true,
             isLoading = false,

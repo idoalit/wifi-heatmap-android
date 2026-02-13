@@ -9,10 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.MapsHomeWork
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -24,6 +24,8 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -35,8 +37,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
 import id.klaras.wifilogger.auth.AuthState
 import id.klaras.wifilogger.auth.AuthViewModel
 import id.klaras.wifilogger.ui.screen.FloorPlanScreen
@@ -46,6 +48,7 @@ import id.klaras.wifilogger.ui.screen.LogHistoryScreen
 import id.klaras.wifilogger.ui.screen.LoggingScreen
 import id.klaras.wifilogger.ui.screen.LoginScreen
 import id.klaras.wifilogger.ui.theme.WiFiLoggerTheme
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
@@ -67,15 +70,18 @@ fun WiFiLoggerApp(
 ) {
     val authState by authViewModel.authState.collectAsState()
     val context = LocalContext.current
+    val credentialManager = remember { CredentialManager.create(context) }
+    val scope = rememberCoroutineScope()
 
     when (authState) {
         is AuthState.SignedIn -> {
             AuthedApp(
                 onSignOut = {
-                    GoogleSignIn.getClient(
-                        context,
-                        GoogleSignInOptions.DEFAULT_SIGN_IN
-                    ).signOut()
+                    scope.launch {
+                        runCatching {
+                            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+                        }
+                    }
                     authViewModel.signOut()
                 }
             )
@@ -134,14 +140,14 @@ private fun AuthedApp(
                             AppDestinations.FLOOR_PLANS.name -> "Floor Plans"
                             AppDestinations.WIFI_SCAN.name -> "Heatmap"
                             AppDestinations.LOGGING.name -> "WiFi Logging"
-                            AppDestinations.LOG_HISTORY.name -> "Riwayat Log WiFi"
+                            AppDestinations.LOG_HISTORY.name -> "WiFi Log History"
                             "heatmap" -> "WiFi Heatmap"
                             else -> "WiFi Logger"
                         })
                     },
                     actions = {
                         IconButton(onClick = onSignOut) {
-                            Icon(Icons.Default.Logout, contentDescription = "Sign out")
+                            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign out")
                         }
                     }
                 )
@@ -206,8 +212,8 @@ enum class AppDestinations(
     val label: String,
     val icon: ImageVector,
 ) {
-    FLOOR_PLANS("Rooms", Icons.Default.Home),
-    WIFI_SCAN("Heatmap", Icons.Default.Map),
+    FLOOR_PLANS("Rooms", Icons.Default.MapsHomeWork),
+    WIFI_SCAN("Heatmap", Icons.Default.LocalFireDepartment),
     LOGGING("Logging", Icons.Default.Create),
-    LOG_HISTORY("Logs", Icons.Default.List),
+    LOG_HISTORY("Logs", Icons.AutoMirrored.Filled.List),
 }

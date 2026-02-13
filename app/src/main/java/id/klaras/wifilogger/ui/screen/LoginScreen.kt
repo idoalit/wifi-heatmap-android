@@ -1,8 +1,8 @@
 package id.klaras.wifilogger.ui.screen
 
 import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -30,9 +31,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import id.klaras.wifilogger.BuildConfig
 import id.klaras.wifilogger.R
 import kotlinx.coroutines.launch
@@ -53,31 +57,25 @@ fun LoginScreen(
     }
     val hasWebClientId = webClientId.isNotBlank() && !webClientId.startsWith("REPLACE_")
 
-    val signInOptions = remember {
-        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(webClientId)
-            .requestEmail()
+    val credentialManager = remember { CredentialManager.create(context) }
+    val googleIdOption = remember(webClientId) {
+        GetGoogleIdOption.Builder()
+            .setServerClientId(webClientId)
+            .setFilterByAuthorizedAccounts(false)
+            .setAutoSelectEnabled(true)
             .build()
     }
-    val googleSignInClient = remember {
-        GoogleSignIn.getClient(context, signInOptions)
+    val credentialRequest = remember(webClientId) {
+        if (hasWebClientId) {
+            GetCredentialRequest.Builder()
+                .addCredentialOption(googleIdOption)
+                .build()
+        } else {
+            null
+        }
     }
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode != Activity.RESULT_OK) {
-            onGoogleIdToken(null)
-            return@rememberLauncherForActivityResult
-        }
-        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-        try {
-            val account = task.getResult(ApiException::class.java)
-            onGoogleIdToken(account.idToken)
-        } catch (_: ApiException) {
-            onGoogleIdToken(null)
-        }
-    }
+    val activity = remember(context) { context.findActivity() }
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -104,12 +102,6 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.heatmap),
-                    contentDescription = "App Logo",
-                    modifier = Modifier.size(100.dp)
-                )
-                Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = stringResource(R.string.login_title),
                     style = MaterialTheme.typography.headlineMedium
@@ -131,7 +123,36 @@ fun LoginScreen(
                             }
                             return@Button
                         }
-                        launcher.launch(googleSignInClient.signInIntent)
+                        if (credentialRequest == null) {
+                            onGoogleIdToken(null)
+                            return@Button
+                        }
+                        if (activity == null) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Unable to start login.")
+                            }
+                            return@Button
+                        }
+                        scope.launch {
+                            try {
+                                val result = credentialManager.getCredential(activity,
+                                    credentialRequest
+                                )
+                                val idToken = when (val credential = result.credential) {
+                                    is CustomCredential -> {
+                                        if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                                            GoogleIdTokenCredential.createFrom(credential.data).idToken
+                                        } else {
+                                            null
+                                        }
+                                    }
+                                    else -> null
+                                }
+                                onGoogleIdToken(idToken)
+                            } catch (_: GetCredentialException) {
+                                onGoogleIdToken(null)
+                            }
+                        }
                     },
                     enabled = !isBusy,
                     modifier = Modifier.fillMaxWidth()
@@ -143,6 +164,12 @@ fun LoginScreen(
                             modifier = Modifier.size(20.dp)
                         )
                     } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.google),
+                            contentDescription = "Google Logo",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
                         Text(text = stringResource(R.string.login_google_button))
                     }
                 }
@@ -169,4 +196,10 @@ fun LoginScreen(
             }
         }
     }
+}
+
+private fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
